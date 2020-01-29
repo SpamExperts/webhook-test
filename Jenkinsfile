@@ -2,7 +2,6 @@ pipeline {
     agent {
         dockerfile{
             label "linux-tests"
-            filename "Dockerfile"
         }
     }
     stages {
