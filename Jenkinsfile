@@ -1,43 +1,49 @@
 pipeline {
     agent {
-        dockerfile{
-            label "linux-tests"
-        }
+        label 'mail-autobuild-1'
     }
     stages {
-        stage("Package and Deploy Production") {
-            when {
-                branch 'master'
-            }
-            environment {
-                // TODO replace with allowed users list
-                allowedUsers = "admin"
-            }
+        stage('Preparing Enviroment') {
             steps {
-                    script {
-                        try {
-                        timeout(time: 2, unit: "MINUTES") {
-                            input(
-                                message: "Do you want to approve the deploy in production?",
-                                ok: "Yes",
-                                submitterParameter: "approver",
-                                submitter: allowedUsers
-                            )
-                        }
-                        }catch (FlowInterruptedException) {
-                            catchError(buildResult: 'SUCCESS', stageResult: 'ABORTED') {
-                                exit(1)
-                            }
-                        return
-                        }
-                    echo "Am intrat pe aici"
+                    sh 'echo "StrictHostKeyChecking no" >>~/.ssh/config'                 
+                    sh "npm install -g allure-commandline"
+                    sh "npm install -g codeceptjs"
+                    sh "sudo npm install -g puppeteer --unsafe-perm=true"
+            }
+        }
+        stage('General Clean up') {
+            steps {
+                dir("/root/trunk/") {
+                    sh 'env PYTHONPATH=. python testutils/cleanup.py'
+                }
+            }
+        }
+        stage('Run archiving tests') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    dir("/root/workspace/spampanel/public/js/ng2/") {
+                        sh "codeceptjs run --grep '@full-stack-archive'"
                     }
                 }
             }
         }
-    post {
-        always {
-        deleteDir()
+        stage('Run log tests') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    dir("/root/workspace/spampanel/public/js/ng2/") {
+                        sh "codeceptjs run --grep '@full-stack-log'"
+                    }
+                }
             }
         }
+        stage('search reports tests') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    dir("/root/workspace/spampanel/public/js/ng2/") {
+                        sh "codeceptjs run --grep '@full-stack-search-reports'"
+                    }
+                }
+            }
+        }
+    }
 }
