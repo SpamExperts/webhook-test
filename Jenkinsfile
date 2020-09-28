@@ -5,7 +5,7 @@ pipeline {
     stages {
         stage('Preparing Enviroment') {
             steps {
-                    echo "test a intrat pe aiciiii"
+                    echo "test a intrat pe aiciiiddi"
             }
         }
         }
